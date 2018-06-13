@@ -59,7 +59,12 @@ Rphenograph <- function(data, k=30){
         "  -k is set to ", k)
     
     cat("  Finding nearest neighbors...")
-    t1 <- system.time(neighborMatrix <- find_neighbors(data, k=k+1)[,-1])
+    t1 <- system.time(neighborMatrix <- find_neighbors(data, k=k))
+
+    if(any(is.nan(neighborMatrix)))
+        stop("Approximate KNN failed to find ", k, " neighbors for all points. ",
+             "NMSLIB parameters need to be tweaked!")
+
     cat("DONE ~",t1[3],"s\n", " Compute jaccard coefficient between nearest-neighbor sets...")
     t2 <- system.time(links <- jaccard_coeff(neighborMatrix))
 
@@ -87,13 +92,6 @@ Rphenograph <- function(data, k=30){
 
 #' K Nearest Neighbour Search
 #'
-#' Uses a kd-tree to find the p number of near neighbours for each point in an input/output dataset.
-#' 
-#' Use the nn2 function from the RANN package, utilizes the Approximate Near Neighbor (ANN) C++ library, 
-#' which can give the exact near neighbours or (as the name suggests) approximate near neighbours 
-#' to within a specified error bound. For more information on the ANN library please 
-#' visit http://www.cs.umd.edu/~mount/ANN/.
-#' 
 #' @param data matrix; input data matrix
 #' @param k integer; number of nearest neighbours
 #' 
@@ -104,9 +102,18 @@ Rphenograph <- function(data, k=30){
 #' data <- as.matrix(iris_unique[,1:4])
 #' neighbors <- find_neighbors(data, k=10)
 #' 
-#' @importFrom RANN nn2
+#' @importFrom nmslibR NMSlib
+#' @importFrom parallel detectCores
 #' @export
 find_neighbors <- function(data, k){
-    nearest <- nn2(data, data, k, searchtype = "standard")
-    return(nearest[[1]])
+    # These parameters might need to be tweaked
+    # see https://github.com/nmslib/nmslib/blob/master/python_bindings/parameters.md
+    index_params = list('M'=15, 'indexThreadQty'=detectCores(), 'efConstruction'=100,
+      'post'=0, 'skip_optimized_index'=0)
+    query_time_params = list('efSearch' = 100)
+    init_nms = NMSlib$new(input_data=data, Index_Params=index_params, Time_Params=query_time_params,
+      space='l2', space_params=NULL, method='hnsw', data_type='DENSE_VECTOR', dtype='DOUBLE',
+      index_filepath=NULL, print_progress=FALSE)
+    nearest <- init_nms$knn_Query_Batch(data, k, num_threads = detectCores())
+    return(nearest$knn_idx)
 }

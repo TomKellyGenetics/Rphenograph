@@ -15,13 +15,7 @@ find_neighbors(data, k)
 a n-by-k matrix of neighbor indices
 }
 \description{
-Uses a kd-tree to find the p number of near neighbours for each point in an input/output dataset.
-}
-\details{
-Use the nn2 function from the RANN package, utilizes the Approximate Near Neighbor (ANN) C++ library, 
-which can give the exact near neighbours or (as the name suggests) approximate near neighbours 
-to within a specified error bound. For more information on the ANN library please 
-visit http://www.cs.umd.edu/~mount/ANN/.
+K Nearest Neighbour Search
 }
 \examples{
 iris_unique <- unique(iris) # Remove duplicates
@@ -29,4 +23,3 @@ data <- as.matrix(iris_unique[,1:4])
 neighbors <- find_neighbors(data, k=10)
 
 }
-
